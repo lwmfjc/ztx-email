@@ -1,16 +1,14 @@
 package com.ztx;
 
 import javax.mail.*;
-import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Date;
 import java.util.Properties;
 
 public class EmailUtils {
+
     public static void getEmails() throws MessagingException, IOException {
         // 定义连接POP3服务器的属性信息
         String popServer = "pop.163.com";
@@ -47,7 +45,6 @@ public class EmailUtils {
         folder.close(false);// 关闭邮件夹对象
         store.close(); // 关闭连接对象
     }
-
 
     /**
      * 邮件发送
@@ -97,4 +94,5 @@ public class EmailUtils {
         transport.sendMessage(msg, msg.getAllRecipients());
         transport.close();
     }
+
 }
