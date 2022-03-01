@@ -86,9 +86,6 @@ public class EmailUtils {
     }
 
     public static void getEmailsByImap() throws MessagingException, IOException {
-        // 定义连接POP3服务器的属性信息
-        String popServer = "pop.163.com";
-        String popProtocol = "pop3";
 
         String protocolImap = "imap";
 
