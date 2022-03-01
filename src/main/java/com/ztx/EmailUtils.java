@@ -1,45 +1,136 @@
 package com.ztx;
 
+import com.sun.mail.imap.IMAPStore;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Properties;
+import javax.activation.DataHandler;
+import javax.activation.FileDataSource;
 import javax.mail.*;
 import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
-import java.io.IOException;
-import java.util.Date;
-import java.util.Properties;
+import javax.mail.internet.MimeMultipart;
+import javax.mail.search.SearchTerm;
 
 public class EmailUtils {
+
+    private static String dirPath = System.getProperty("user.dir");
 
     public static void getEmails() throws MessagingException, IOException {
         // 定义连接POP3服务器的属性信息
         String popServer = "pop.163.com";
-        String protocol = "pop3";
+        String popProtocol = "pop3";
+
+        String imapServer = "imap.163.com";
+        String protocolImap = "imap";
+
         String username = "lwm_fjc@163.com";
         String password = "AUZNEWSMRKJRNPNV"; // QQ邮箱的SMTP的授权码，什么是授权码，它又是如何设置？
 
         Properties props = new Properties();
-        props.setProperty("mail.transport.protocol", protocol); // 使用的协议（JavaMail规范要求）
-        props.setProperty("mail.smtp.host", popServer); // 发件人的邮箱的 SMTP服务器地址
+        //props.setProperty("mail.transport.protocol", protocolImap); // 使用的协议（JavaMail规范要求）
+        props.setProperty("mail.store.protocol", protocolImap); // 使用的协议（JavaMail规范要求）
+        props.setProperty("mail.pop.host", imapServer); // 发件人的邮箱的 SMTP服务器地址
+        //props.setProperty("mail.imap.host", imapServer); // 发件人的邮箱的 SMTP服务器地址
+
+        HashMap IAM = new HashMap();
+        //带上IMAP ID信息，由key和value组成，例如name，version，vendor，support-email等。
+        IAM.put("name", "myname");
+        IAM.put("version", "1.0.0");
+        IAM.put("vendor", "myclient");
+        IAM.put("support-email", "testmail@test.com");
 
         // 获取连接
         Session session = Session.getDefaultInstance(props);
         session.setDebug(false);
 
         // 获取Store对象
-        Store store = session.getStore(protocol);
-        store.connect(popServer, username, password); // POP3服务器的登陆认证
+        //Store store = session.getStore(popProtocol);
+        //store.connect(popServer, username, password); // POP3服务器的登陆认证
+
+        IMAPStore store = (IMAPStore) session.getStore(protocolImap);
+        store.connect(imapServer, username, password); // POP3服务器的登陆认证
+        store.id(IAM);
 
         // 通过POP3协议获得Store对象调用这个方法时，邮件夹名称只能指定为"INBOX"
         Folder folder = store.getFolder("INBOX");// 获得用户的邮件帐户
         folder.open(Folder.READ_WRITE); // 设置对邮件帐户的访问权限
 
-        Message[] messages = folder.getMessages();// 得到邮箱帐户中的所有邮件
+        Message[] messages = folder.search(new SearchTerm() {
+            @Override
+            public boolean match(Message message) {
+                boolean isMatch = true;
+                try {
+                    isMatch = message.getFlags().contains(Flags.Flag.SEEN);
+                } catch (MessagingException e) {
+                    e.printStackTrace();
+                }
+                return  isMatch;
 
-        for (Message message : messages) {
-            String subject = message.getSubject();// 获得邮件主题
-            Address from = (Address) message.getFrom()[0];// 获得发送者地址
-            System.out.println("邮件的主题为: " + subject + "\t发件人地址为: " + from);
-            System.out.println("邮件的内容为：");
-            message.writeTo(System.out);// 输出邮件内容到控制台
+            }
+        });
+        //Message[] messages = folder.getMessages();// 得到邮箱帐户中的所有邮件
+
+        for (Message msg : messages) {
+            String subject = msg.getSubject();// 获得邮件主题
+
+            Address from = (Address) msg.getFrom()[0];// 获得发送者地址
+            System.out.println("邮件的主题为: " + subject + "\t发件人地址为: " + from
+                    + "邮件发送时间:" + msg.getReceivedDate().getTime());
+            //System.out.println(msg.getFlags());
+
+            //pop3没有判断邮件是否为已读的功能，要使用Imap才可以
+            Flags flags = msg.getFlags();
+            if (flags.contains(Flags.Flag.SEEN))
+                System.out.println("这是一封已读邮件");
+            else {
+                System.out.println("未读邮件");
+                //if (msg.getMessageNumber() % 2 == 0) {
+                msg.setFlag(Flags.Flag.SEEN,
+                        true);
+                //}
+            }
+            //System.out.println("邮件的内容为：");
+
+            //Message msg = folder.getMessage(msgnum);
+            // 邮件类型不是mixed时，表示邮件中不包含附件，直接输出邮件内容
+            if (!msg.isMimeType("multipart/mixed")) {
+                //response.setContentType("message/rfc822");
+                //System.out.println(msg.getContent());
+            } else {
+                // 查找并输出邮件中的邮件正文
+                Multipart mp = (Multipart) msg.getContent();
+                /*int bodynum = mp.getCount();
+                for (int i = 0; i < bodynum; i++) {
+                    BodyPart bp = mp.getBodyPart(i);
+
+                    *//*
+                 * MIME消息头中不包含disposition字段， 并且MIME消息类型不为mixed时，
+                 * 表示当前获得的MIME消息为邮件正文
+                 *//*
+                 *//*if (!bp.isMimeType("multipart/mixed") && bp.getDisposition() == null) {
+                        //response.setContentType("message/rfc822");
+                        //bp.writeTo(sos);
+                    }*//*
+                    //得到附件输入流
+                    InputStream inputStream = bp.getInputStream();
+                    FileOutputStream outputStream=new FileOutputStream(dirPath+"//my_out.xlsx");
+                    int c = 0;
+                    byte[] bytes = new byte[1024];
+                    while ((c = inputStream.read(bytes)) != -1) {
+                        outputStream.write(bytes,0,c);
+                    }
+                    outputStream.close();
+                    inputStream.close();
+                }*/
+            }
+            //message.writeTo(System.out);// 输出邮件内容到控制台
         }
 
         folder.close(false);// 关闭邮件夹对象
@@ -49,10 +140,12 @@ public class EmailUtils {
     /**
      * 邮件发送
      */
-    public static void sendEmail() throws MessagingException, IOException {
+    public static void sendEmail() throws Exception {
         String from = "ly_fjc@163.com";
         String to = "lwm_fjc@163.com"; //收件人
-        String subject = "my_subject";
+        Date d = new Date(); //获取当前时间对象
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");//创建日期格式化类对象,”yyyy/MM/dd HH:mm:ss”是我们
+        String subject = "my_subject" + sdf.format(d);
         String body = "my_body";
 
         String smtpHost = "smtp.163.com";
@@ -76,6 +169,13 @@ public class EmailUtils {
         msg.setSubject(subject); //设置主题
         msg.setText(body); //正文
 
+        // 创建用于组合邮件正文和附件的MimeMultipart对象
+        MimeBodyPart attachPart = createAttachment(dirPath + "\\数据导出.xlsx");
+        MimeMultipart allMultipart = new MimeMultipart("mixed");
+
+        allMultipart.addBodyPart(attachPart);
+
+        msg.setContent(allMultipart);
         msg.saveChanges();//保存最终的邮件内容
 
         session.setDebug(true);//可以查看邮件发送的过程
@@ -93,6 +193,16 @@ public class EmailUtils {
         // 发送，message.getAllRecipients() 获取到的是在创建邮件对象时添加的所有收件人, 抄送人, 密送人
         transport.sendMessage(msg, msg.getAllRecipients());
         transport.close();
+    }
+
+    public static MimeBodyPart createAttachment(String filename)
+            throws Exception {
+        // 创建保存附件的MimeBodyPart对象，并加入附件内容和相应信息
+        MimeBodyPart attachPart = new MimeBodyPart();
+        FileDataSource fds = new FileDataSource(filename);
+        attachPart.setDataHandler(new DataHandler(fds));
+        attachPart.setFileName(fds.getName());
+        return attachPart;
     }
 
 }
