@@ -2,7 +2,9 @@ package com.ztx;
 
 import com.sun.mail.imap.IMAPStore;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -10,10 +12,7 @@ import java.util.Properties;
 import javax.activation.DataHandler;
 import javax.activation.FileDataSource;
 import javax.mail.*;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeBodyPart;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
+import javax.mail.internet.*;
 import javax.mail.search.SearchTerm;
 
 public class EmailUtils {
@@ -89,13 +88,13 @@ public class EmailUtils {
 
         String protocolImap = "imap";
 
-        //String imapServer = "imap.163.com";
-        // String username = "lwm_fjc@163.com";
-        //String password = "AUZNEWSMRKJRNPNV"; // QQ邮箱的SMTP的授权码，什么是授权码，它又是如何设置？
+        String imapServer = "imap.163.com";
+        String username = "lwm_fjc@163.com";
+        String password = "AUZNEWSMRKJRNPNV"; // QQ邮箱的SMTP的授权码，什么是授权码，它又是如何设置？
 
-        String imapServer = "imap.qq.com";
-        String username = "811011902@qq.com";
-        String password = "asdfhxujstlcbfjg"; // 163邮箱的SMTP的授权码，什么是授权码，它又是如何设置？
+        //String imapServer = "imap.qq.com";
+        //String username = "811011902@qq.com";
+        //String password = "asdfhxujstlcbfjg"; // 163邮箱的SMTP的授权码，什么是授权码，它又是如何设置？
 
         Properties props = new Properties();
         //props.setProperty("mail.transport.protocol", protocolImap); // 使用的协议（JavaMail规范要求）
@@ -135,14 +134,45 @@ public class EmailUtils {
                 } catch (MessagingException e) {
                     e.printStackTrace();
                 }
-                return !isMatch;
+                return  isMatch;
 
             }
         });
         //Message[] messages = folder.getMessages();// 得到邮箱帐户中的所有邮件
 
         for (Message msg : messages) {
-            String subject = msg.getSubject();// 获得邮件主题
+            // 如果该邮件是组合型"multipart/*"则可能包含附件等
+            if (msg.isMimeType("multipart/*")) {
+                Multipart mp = (Multipart) msg.getContent();
+
+                for (int i = 0; i < mp.getCount(); i++) {
+                    BodyPart bp = mp.getBodyPart(i);
+
+                    // 如果该BodyPart对象包含附件，则应该解析出来
+                    if (bp.getDisposition() != null) {
+                        String filename = bp.getFileName();
+
+                        if (filename.startsWith("=?")) {
+                            // 把文件名编码成符合RFC822规范
+                            filename = MimeUtility.decodeText(filename);
+                        }
+                        System.out.println("filename：" + filename);
+                        //得到附件输入流
+                        InputStream inputStream;
+                        inputStream = bp.getInputStream();
+                        System.out.println(dirPath);
+                        FileOutputStream outputStream = new FileOutputStream(dirPath + "\\"+filename+"");
+                        int c = 0;
+                        byte[] bytes = new byte[1024];
+                        while ((c = inputStream.read(bytes)) != -1) {
+                            outputStream.write(bytes, 0, c);
+                        }
+                        outputStream.close();
+                        inputStream.close();
+                    }
+                }
+            }
+            /*String subject = msg.getSubject();// 获得邮件主题
 
             Address from = (Address) msg.getFrom()[0];// 获得发送者地址
             System.out.println("邮件的主题为: " + subject + "\t发件人地址为: " + from
@@ -170,31 +200,34 @@ public class EmailUtils {
             } else {
                 // 查找并输出邮件中的邮件正文
                 Multipart mp = (Multipart) msg.getContent();
-                /*int bodynum = mp.getCount();
+                int bodynum = mp.getCount();
                 for (int i = 0; i < bodynum; i++) {
                     BodyPart bp = mp.getBodyPart(i);
+                    System.out.println(bp.getFileName());
 
-                    *//*
-                 * MIME消息头中不包含disposition字段， 并且MIME消息类型不为mixed时，
-                 * 表示当前获得的MIME消息为邮件正文
-                 *//*
-                 *//*if (!bp.isMimeType("multipart/mixed") && bp.getDisposition() == null) {
+
+                    // MIME消息头中不包含disposition字段， 并且MIME消息类型不为mixed时，
+                    // 表示当前获得的MIME消息为邮件正文
+
+                    if (!bp.isMimeType("multipart/mixed") && bp.getDisposition() == null) {
                         //response.setContentType("message/rfc822");
                         //bp.writeTo(sos);
-                    }*//*
-                    //得到附件输入流
-                    InputStream inputStream = bp.getInputStream();
-                    FileOutputStream outputStream=new FileOutputStream(dirPath+"//my_out.xlsx");
-                    int c = 0;
-                    byte[] bytes = new byte[1024];
-                    while ((c = inputStream.read(bytes)) != -1) {
-                        outputStream.write(bytes,0,c);
+                    } else {
+                        //得到附件输入流
+                        InputStream inputStream;
+                        inputStream = bp.getInputStream();
+                        FileOutputStream outputStream = new FileOutputStream(dirPath + "//"+"my_out.xlsx");
+                        int c = 0;
+                        byte[] bytes = new byte[1024];
+                        while ((c = inputStream.read(bytes)) != -1) {
+                            outputStream.write(bytes, 0, c);
+                        }
+                        outputStream.close();
+                        inputStream.close();
                     }
-                    outputStream.close();
-                    inputStream.close();
-                }*/
-            }
-            //message.writeTo(System.out);// 输出邮件内容到控制台
+                }
+                //message.writeTo(System.out);// 输出邮件内容到控制台
+            }*/
         }
 
         folder.close(false);// 关闭邮件夹对象
