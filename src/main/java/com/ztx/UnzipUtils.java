@@ -28,7 +28,7 @@ public class UnzipUtils {
      * @param targetDir      解压到的文件夹
      * @throws IOException
      */
-    public static void unZip(String sourceFilename, String targetDir) throws IOException {
+    protected static void unZip(String sourceFilename, String targetDir) throws IOException {
         unZip(new File(sourceFilename), targetDir);
     }
 
@@ -110,7 +110,7 @@ public class UnzipUtils {
      * @param file
      * @throws IOException
      */
-    public static void createFileIfNotExist(File file) throws IOException {
+    private static void createFileIfNotExist(File file) throws IOException {
         //创建文件之前先判断文件夹是否存在
         if (!file.getParentFile().exists()) {
             file.getParentFile().mkdirs();

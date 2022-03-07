@@ -14,7 +14,7 @@ public class Unrar5Utils {
 
     }
 
-    public static void unrar(String rarFile, String unRarDir) throws IOException {
+    protected static void unrar(String rarFile, String unRarDir) throws IOException {
 
         //String rarFile = "src\\main\\resources\\unzipTest\\申报表4.rar";
         //String outDir = "D:\\rar5";
@@ -83,7 +83,7 @@ class ExtractCallback implements IArchiveExtractCallback {
 
     }
 
-    public static boolean save2File(File file, byte[] msg) {
+    private static boolean save2File(File file, byte[] msg) {
         OutputStream fos = null;
         try {
             File parent = file.getParentFile();
